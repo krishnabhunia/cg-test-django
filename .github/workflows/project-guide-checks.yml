@@ -1,0 +1,31 @@
+name: Project documentation and source checks
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  docs-and-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify links and Mermaid documentation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path("docs/PROJECT_GUIDE.md");t=p.read_text(encoding="utf-8")
+          assert t.count("~~~")%2==0
+          assert t.count("~~~mermaid")>=3
+          assert "docs/PROJECT_GUIDE.md" in Path("README.md").read_text(encoding="utf-8-sig")
+          for m in re.findall(r"\]\(([^)]+)\)",t):
+           path=m.split("#")[0].split("?")[0]
+           if path and not path.startswith(("http://","https://","#")):
+            assert (p.parent/path).exists(),path
+          print("Markdown passed")
+          PY
+      - name: Syntax / source smoke test
+        run: python -m compileall -q website/login website/signup website/website
